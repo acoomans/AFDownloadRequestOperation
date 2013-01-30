@@ -69,6 +69,11 @@
  */
 @property (assign, readonly) long long offsetContentLength;
 
+/**
+ Tells if should use the temporary path
+ */
+@property (assign, readonly) BOOL useTempPath;
+
 ///----------------------------------
 /// @name Creating Request Operations
 ///----------------------------------
@@ -81,6 +86,7 @@
  @return A new download request operation
  */
 - (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume;
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath useTempPath:(BOOL)useTempPath shouldResume:(BOOL)shouldResume;
 
 /** 
  Deletes the temporary file.

@@ -51,7 +51,7 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
 #pragma mark - NSObject
 
-- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume {
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath useTempPath:(BOOL)useTempPath shouldResume:(BOOL)shouldResume {
     if ((self = [super initWithRequest:urlRequest])) {
         NSParameterAssert(targetPath != nil && urlRequest != nil);
         _shouldResume = shouldResume;
@@ -68,6 +68,8 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         }else {
             _targetPath = targetPath;
         }
+		
+		_useTempPath = useTempPath;
 
         // Download is saved into a temorary file and renamed upon completion.
         NSString *tempPath = [self tempPath];
@@ -89,6 +91,12 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
         [self setCompletionBlockWithSuccess:nil failure:nil];
     }
     return self;
+}
+
+- (id)initWithRequest:(NSURLRequest *)urlRequest targetPath:(NSString *)targetPath shouldResume:(BOOL)shouldResume {
+	if ((self = [self initWithRequest:urlRequest targetPath:targetPath useTempPath:YES shouldResume:shouldResume])) {
+	}
+	return self;
 }
 
 // updates the current request to set the correct start-byte-range.
@@ -122,8 +130,8 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 }
 
 - (NSString *)tempPath {
-    NSString *tempPath = nil;
-    if (self.targetPath) {
+    NSString *tempPath = self.targetPath;
+    if (self.targetPath && self.useTempPath) {
         NSString *md5URLString = [[self class] md5StringForString:self.targetPath];
         tempPath = [[[self class] cacheFolder] stringByAppendingPathComponent:md5URLString];
     }
@@ -176,17 +184,19 @@ typedef void (^AFURLConnectionProgressiveOperationProgressBlock)(NSInteger bytes
 
         // loss of network connections = error set, but not cancel
         }else if(!self.error) {
-            // move file to final position and capture error
-            @synchronized(self) {
-                NSFileManager *fileManager = [NSFileManager new];
-                if (self.shouldOverwrite) {
-                    [fileManager removeItemAtPath:_targetPath error:NULL]; // avoid "File exists" error
-                }
-                [fileManager moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
-                if (localError) {
-                    _fileError = localError;
-                }
-            }
+			if (self.useTempPath) {
+				// move file to final position and capture error
+				@synchronized(self) {
+					NSFileManager *fileManager = [NSFileManager new];
+					if (self.shouldOverwrite) {
+						[fileManager removeItemAtPath:_targetPath error:NULL]; // avoid "File exists" error
+					}
+					[fileManager moveItemAtPath:[self tempPath] toPath:_targetPath error:&localError];
+					if (localError) {
+						_fileError = localError;
+					}
+				}
+			}
         }
 
         if (self.error) {
